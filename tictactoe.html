@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tic Tac Toe</title>
+  <title>Tic Tac Toe — Online</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -25,6 +26,112 @@
       color: #f0f0f0;
       text-transform: uppercase;
     }
+
+    .btn {
+      padding: 0.7rem 2.5rem;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: #1f1f1f;
+      color: #d4d4d4;
+      border: 1px solid #333;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, border-color 0.2s;
+    }
+
+    .btn:hover {
+      background: #2a2a2a;
+      border-color: #555;
+      transform: scale(1.05);
+    }
+
+    .btn-accent { border-color: #74c0fc; color: #74c0fc; }
+
+    /* ── Lobby ── */
+    #lobby {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.2rem;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    #divider { color: #333; font-size: 0.85rem; letter-spacing: 2px; }
+
+    #join-row { display: flex; gap: 0.5rem; width: 100%; }
+
+    #code-input {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      font-size: 0.9rem;
+      background: #141414;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #d4d4d4;
+      letter-spacing: 1px;
+    }
+
+    #code-input:focus { outline: none; border-color: #555; }
+
+    #lobby-msg {
+      font-size: 0.85rem;
+      color: #555;
+      letter-spacing: 1px;
+      text-align: center;
+      min-height: 1.2rem;
+    }
+
+    #code-box {
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      width: 100%;
+    }
+
+    #code-box .cb-label {
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 0.6rem;
+    }
+
+    #code-box .cb-code {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #74c0fc;
+      letter-spacing: 2px;
+      word-break: break-all;
+      cursor: pointer;
+    }
+
+    #code-box .cb-hint {
+      font-size: 0.7rem;
+      color: #444;
+      margin-top: 0.4rem;
+    }
+
+    /* ── Game ── */
+    #game {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #player-badge {
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      color: #555;
+      margin-bottom: 0.6rem;
+    }
+
+    #player-badge .mark-x { color: #ff6b6b; font-weight: 800; }
+    #player-badge .mark-o { color: #74c0fc; font-weight: 800; }
 
     #status {
       font-size: 1.2rem;
@@ -58,14 +165,14 @@
       user-select: none;
     }
 
-    .cell:hover:not(.taken) {
+    .cell:hover:not(.taken):not(.disabled) {
       background: #1f1f1f;
       border-color: #444;
       transform: scale(1.05);
     }
 
-    .cell.taken { cursor: default; }
-
+    .cell.taken   { cursor: default; }
+    .cell.disabled { cursor: default; }
     .cell.x { color: #ff6b6b; }
     .cell.o { color: #74c0fc; }
 
@@ -81,26 +188,7 @@
       100% { transform: scale(1); }
     }
 
-    #restart {
-      margin-top: 2rem;
-      padding: 0.7rem 2.5rem;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      background: #1f1f1f;
-      color: #d4d4d4;
-      border: 1px solid #333;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s, border-color 0.2s;
-    }
-
-    #restart:hover {
-      background: #2a2a2a;
-      border-color: #555;
-      transform: scale(1.05);
-    }
+    #restart { margin-top: 2rem; }
 
     #score {
       display: flex;
@@ -110,47 +198,58 @@
       color: #666;
     }
 
-    .score-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-
+    .score-box { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .score-label { font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; }
     .score-value { font-size: 2rem; font-weight: 800; }
-    #score-x .score-value { color: #ff6b6b; }
+    #score-x .score-value   { color: #ff6b6b; }
     #score-tie .score-value { color: #888; }
-    #score-o .score-value { color: #74c0fc; }
+    #score-o .score-value   { color: #74c0fc; }
   </style>
 </head>
 <body>
+
   <h1>Tic Tac Toe</h1>
-  <div id="status">X's turn</div>
-  <div id="board">
-    <div class="cell" data-i="0"></div>
-    <div class="cell" data-i="1"></div>
-    <div class="cell" data-i="2"></div>
-    <div class="cell" data-i="3"></div>
-    <div class="cell" data-i="4"></div>
-    <div class="cell" data-i="5"></div>
-    <div class="cell" data-i="6"></div>
-    <div class="cell" data-i="7"></div>
-    <div class="cell" data-i="8"></div>
+
+  <!-- LOBBY -->
+  <div id="lobby">
+    <button class="btn btn-accent" onclick="createGame()">Create Game</button>
+    <div id="divider">— OR —</div>
+    <div id="join-row">
+      <input id="code-input" placeholder="Paste room code here" />
+      <button class="btn" onclick="joinGame()">Join</button>
+    </div>
+    <div id="lobby-msg"></div>
   </div>
-  <button id="restart">Restart</button>
-  <div id="score">
-    <div class="score-box" id="score-x">
-      <span class="score-label">X Wins</span>
-      <span class="score-value" id="x-wins">0</span>
+
+  <!-- GAME -->
+  <div id="game">
+    <div id="player-badge"></div>
+    <div id="status"></div>
+    <div id="board">
+      <div class="cell" data-i="0"></div>
+      <div class="cell" data-i="1"></div>
+      <div class="cell" data-i="2"></div>
+      <div class="cell" data-i="3"></div>
+      <div class="cell" data-i="4"></div>
+      <div class="cell" data-i="5"></div>
+      <div class="cell" data-i="6"></div>
+      <div class="cell" data-i="7"></div>
+      <div class="cell" data-i="8"></div>
     </div>
-    <div class="score-box" id="score-tie">
-      <span class="score-label">Ties</span>
-      <span class="score-value" id="ties">0</span>
-    </div>
-    <div class="score-box" id="score-o">
-      <span class="score-label">O Wins</span>
-      <span class="score-value" id="o-wins">0</span>
+    <button class="btn" id="restart" onclick="restartGame()">Restart</button>
+    <div id="score">
+      <div class="score-box" id="score-x">
+        <span class="score-label">X Wins</span>
+        <span class="score-value" id="x-wins">0</span>
+      </div>
+      <div class="score-box" id="score-tie">
+        <span class="score-label">Ties</span>
+        <span class="score-value" id="ties">0</span>
+      </div>
+      <div class="score-box" id="score-o">
+        <span class="score-label">O Wins</span>
+        <span class="score-value" id="o-wins">0</span>
+      </div>
     </div>
   </div>
 
@@ -161,47 +260,135 @@
       [0,4,8],[2,4,6]
     ];
 
+    let peer, conn, myMark, opponentMark;
     let board, current, over, scores;
 
-    function init() {
-      board = Array(9).fill(null);
+    // ── Lobby ──────────────────────────────────────────────────────────────
+
+    function lobbyMsg(html) {
+      document.getElementById('lobby-msg').innerHTML = html;
+    }
+
+    function createGame() {
+      lobbyMsg('Connecting…');
+      peer = new Peer();
+
+      peer.on('open', id => {
+        lobbyMsg(`
+          <div id="code-box">
+            <div class="cb-label">Your Room Code</div>
+            <div class="cb-code" title="Click to copy" onclick="copyCode(this,'${id}')">${id}</div>
+            <div class="cb-hint">Click to copy &middot; Share with your opponent</div>
+          </div>
+          <div style="margin-top:.8rem">Waiting for opponent…</div>
+        `);
+      });
+
+      peer.on('connection', c => {
+        conn = c;
+        myMark = 'X';
+        opponentMark = 'O';
+        setupConn();
+      });
+
+      peer.on('error', e => lobbyMsg('Error: ' + e.type));
+    }
+
+    function joinGame() {
+      const code = document.getElementById('code-input').value.trim();
+      if (!code) return;
+      lobbyMsg('Connecting…');
+      peer = new Peer();
+      peer.on('open', () => {
+        conn = peer.connect(code);
+        myMark = 'O';
+        opponentMark = 'X';
+        setupConn();
+      });
+      peer.on('error', e => lobbyMsg('Could not connect: ' + e.type));
+    }
+
+    function copyCode(el, code) {
+      navigator.clipboard.writeText(code).then(() => {
+        const prev = el.textContent;
+        el.textContent = 'Copied!';
+        setTimeout(() => el.textContent = prev, 1500);
+      });
+    }
+
+    // ── Connection ─────────────────────────────────────────────────────────
+
+    function setupConn() {
+      const onOpen = () => {
+        document.getElementById('lobby').style.display = 'none';
+        document.getElementById('game').style.display = 'flex';
+        scores = { X: 0, O: 0, tie: 0 };
+        initGame();
+      };
+
+      if (conn.open) onOpen();
+      else conn.on('open', onOpen);
+
+      conn.on('data', msg => {
+        if (msg.type === 'move')    applyMove(msg.index, opponentMark);
+        if (msg.type === 'restart') doRestart();
+      });
+
+      conn.on('close', () => setStatus('Opponent disconnected.'));
+      conn.on('error', e => setStatus('Connection error.'));
+    }
+
+    // ── Game ───────────────────────────────────────────────────────────────
+
+    function initGame() {
+      board   = Array(9).fill(null);
       current = 'X';
-      over = false;
+      over    = false;
       document.querySelectorAll('.cell').forEach(c => {
         c.textContent = '';
-        c.className = 'cell';
+        c.className   = 'cell';
       });
-      setStatus(`${current}'s turn`);
+      const cls = myMark === 'X' ? 'mark-x' : 'mark-o';
+      document.getElementById('player-badge').innerHTML =
+        `You are <span class="${cls}">${myMark}</span>`;
+      refreshStatus();
+    }
+
+    function refreshStatus() {
+      if (over) return;
+      const mine = current === myMark;
+      setStatus(mine ? 'Your turn' : "Opponent's turn");
+      document.querySelectorAll('.cell').forEach(c =>
+        c.classList.toggle('disabled', !mine)
+      );
     }
 
     function setStatus(msg) {
       document.getElementById('status').textContent = msg;
     }
 
-    function checkWin() {
-      for (const [a,b,c] of WINS) {
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-          return [a,b,c];
-        }
-      }
-      return null;
+    function handleClick(e) {
+      const i = parseInt(e.currentTarget.dataset.i);
+      if (over || board[i] || current !== myMark) return;
+      applyMove(i, myMark);
+      conn.send({ type: 'move', index: i });
     }
 
-    function handleClick(e) {
-      const cell = e.currentTarget;
-      const i = parseInt(cell.dataset.i);
+    function applyMove(i, mark) {
       if (over || board[i]) return;
-
-      board[i] = current;
-      cell.textContent = current;
-      cell.classList.add('taken', current.toLowerCase());
+      board[i] = mark;
+      const cell = document.querySelector(`[data-i="${i}"]`);
+      cell.textContent = mark;
+      cell.classList.add('taken', mark.toLowerCase());
 
       const win = checkWin();
       if (win) {
-        win.forEach(idx => document.querySelector(`[data-i="${idx}"]`).classList.add('win'));
-        setStatus(`${current} wins!`);
-        scores[current]++;
-        document.getElementById(current === 'X' ? 'x-wins' : 'o-wins').textContent = scores[current];
+        win.forEach(idx =>
+          document.querySelector(`[data-i="${idx}"]`).classList.add('win')
+        );
+        setStatus(mark === myMark ? 'You win!' : 'Opponent wins!');
+        scores[mark]++;
+        document.getElementById(mark === 'X' ? 'x-wins' : 'o-wins').textContent = scores[mark];
         over = true;
         return;
       }
@@ -215,13 +402,31 @@
       }
 
       current = current === 'X' ? 'O' : 'X';
-      setStatus(`${current}'s turn`);
+      refreshStatus();
     }
 
-    scores = { X: 0, O: 0, tie: 0 };
+    function checkWin() {
+      for (const [a, b, c] of WINS) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) return [a, b, c];
+      }
+      return null;
+    }
+
+    function restartGame() {
+      doRestart();
+      conn.send({ type: 'restart' });
+    }
+
+    function doRestart() {
+      initGame();
+    }
+
+    // ── Boot ───────────────────────────────────────────────────────────────
+
     document.querySelectorAll('.cell').forEach(c => c.addEventListener('click', handleClick));
-    document.getElementById('restart').addEventListener('click', init);
-    init();
+    document.getElementById('code-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinGame();
+    });
   </script>
 </body>
 </html>
