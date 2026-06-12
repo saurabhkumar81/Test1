@@ -22,4 +22,5 @@ All logic lives in one file:
 ## Git & GitHub
 
 - Remote: `https://github.com/saurabhkumar81/Test1`
-- Always commit changes with clean, descriptive messages and push to `origin master`
+- After every meaningful change, commit with a clean descriptive message and push to `origin master` immediately — do not batch unrelated changes into one commit and do not leave the session with unpushed work
+- Commit messages should describe the *why* or *what changed*, not just "update file"
